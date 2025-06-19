@@ -62,10 +62,6 @@ class AuthServiceProvider extends ServiceProvider
 
         // Usuário pode acessar grupo se for membro ou admin
         Gate::define('access-group', function (User $user, ?Group $group = null) {
-            // Se não há usuário logado, não pode acessar grupo.
-            if (!$user) {
-                return false;
-            }
             if ($group) {
                 // Admin pode acessar qualquer grupo. Usuário pode acessar grupos a que pertence.
                 if (!$user->relationLoaded('groups')) { $user->load('groups'); }
@@ -73,24 +69,16 @@ class AuthServiceProvider extends ServiceProvider
             }
             // Se nenhum grupo for passado (contexto de listagem, por exemplo)
             // A Policy já define que todos podem ver Any.
-            // Se essa Gate for para "acessar a funcionalidade de grupos", talvez apenas admin.
-            // Se for para "ver os próprios grupos", então $user->groups->isNotEmpty();
-            // Estou deixando como admin-only por default para ser mais restritivo.
             return $user->hasRole('admin');
         });
 
         // Usuário pode criar galeria se for fotógrafo
         Gate::define('create-gallery', fn(User $user) =>
-            // Se não há usuário logado, não pode criar galeria.
-            $user && $user->hasRole('fotografo')
+        $user->hasRole('fotografo')
         );
 
         // Usuário pode gerenciar galeria (upload de imagens, etc.) se for fotógrafo E dono
         Gate::define('manage-gallery', function (User $user, ?Gallery $gallery = null) {
-            // Se não há usuário logado, não pode gerenciar galeria.
-            if (!$user) {
-                return false;
-            }
             if ($gallery) {
                 // Fotógrafos gerenciam suas próprias galerias.
                 return $user->hasRole('fotografo') && $user->id === $gallery->user_id;
@@ -99,50 +87,57 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole('fotografo');
         });
 
-        // GATE PARA ACESSO DE VISUALIZAÇÃO ÀS GALERIAS INDIVIDUAIS
-        // Guests não têm acesso a NENHUM conteúdo de galeria.
-        Gate::define('view-gallery', function (?User $user, Gallery $gallery) {
-            // Se não há usuário logado (é um guest), NUNCA permite acesso.
+        // GATE PARA ACESSO PÚBLICO OU RESTRITO ÀS GALERIAS INDIVIDUAIS
+        // Lida com guests e usuários autenticados para visualização específica.
+        Gate::define('view-public-gallery', function (?User $user, Gallery $gallery) {
+            if (!$gallery->relationLoaded('groups')) { $gallery->load('groups'); }
+
+            $publicGroup = Group::where('name', 'público')->first();
+            $publicGroupId = $publicGroup ? $publicGroup->id : null;
+
+            // Condição 1: Galeria é pública (associada ao grupo 'público')
+            if ($publicGroupId && $gallery->groups->contains($publicGroupId)) {
+                return true;
+            }
+
+            // Se não é pública, o usuário DEVE estar autenticado para continuar
             if (!$user) {
                 return false;
             }
 
-            // Garante que as relações 'groups' estejam carregadas para o usuário
+            // Garante que as relações 'groups' estejam carregadas para o usuário (se autenticado)
             if (!$user->relationLoaded('groups')) { $user->load('groups'); }
-            // Garante que as relações 'groups' estejam carregadas para a galeria
-            if (!$gallery->relationLoaded('groups')) { $gallery->load('groups'); }
 
-            // Condição 1: Usuário é fotógrafo (pode ver qualquer galeria para fins de gerenciamento)
+            // Condição 2: Usuário é fotógrafo (pode ver qualquer galeria para fins de gerenciamento)
             if ($user->hasRole('fotografo')) {
                 return true;
             }
 
-            // Condição 2: Usuário é o dono da galeria
+            // Condição 3: Usuário é o dono da galeria
             if ($gallery->user_id === $user->id) {
                 return true;
             }
 
-            // Condição 3: Usuário pertence a qualquer um dos grupos da galeria
-            // Esta lógica agora se aplica a TODOS os grupos, incluindo o 'público'
-            // (que é tratado como qualquer outro grupo).
+            // Condição 4: Usuário pertence a qualquer um dos grupos da galeria
             $userGroupIds = $user->groups->pluck('id')->toArray();
             $galleryGroupIds = $gallery->groups->pluck('id')->toArray();
 
-            return (bool) array_intersect($userGroupIds, $galleryGroupIds);
+            if (array_intersect($userGroupIds, $galleryGroupIds)) {
+                return true;
+            }
+
+            return false;
         });
 
         // Usuário pode gerenciar imagem (criar, atualizar, deletar) se for fotógrafo E dono da galeria
         Gate::define('manage-image', function (User $user, ?Image $image = null) {
-            // Se não há usuário logado, não pode gerenciar imagem.
-            if (!$user) {
-                return false;
-            }
             if ($image) {
                 $gallery = $image->gallery;
                 if (!$gallery) return false;
                 // Fotógrafos gerenciam imagens em suas próprias galerias.
                 return $user->hasRole('fotografo') && $user->id === $gallery->user_id;
             }
+            // Se nenhum modelo for passado (ex: acesso a uma interface geral de upload de imagens)
             return $user->hasRole('fotografo');
         });
     }
