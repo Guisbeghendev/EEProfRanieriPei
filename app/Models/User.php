@@ -7,12 +7,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne; // Já importado
-use App\Models\Profile; // Já importado
-use App\Models\Group;
-use App\Models\Role;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Traits\HasRoles;
-use App\Models\Gallery; // Já importado
+// Importe o modelo Avatar que acabamos de criar
+use App\Models\Avatar; // <-- IMPORTAÇÃO ADICIONADA
 
 class User extends Authenticatable
 {
@@ -22,7 +20,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'email_verified_at',
+        'email_verified_at', // Manter aqui, pois é preenchido pelo Laravel
     ];
 
     protected $hidden = [
@@ -48,7 +46,8 @@ class User extends Authenticatable
      */
     public function groups(): BelongsToMany
     {
-        return $this->belongsToMany(Group::class, 'group_user', 'user_id', 'group_id');
+        // Simplificado: o Laravel infere 'group_user', 'user_id', 'group_id'
+        return $this->belongsToMany(Group::class);
     }
 
     /**
@@ -57,6 +56,15 @@ class User extends Authenticatable
     public function galleries(): HasMany
     {
         return $this->hasMany(Gallery::class, 'user_id');
+    }
+
+    /**
+     * Get the avatar associated with the user.
+     * Este é o relacionamento que liga o User ao seu Avatar.
+     */
+    public function avatar(): HasOne // <-- RELACIONAMENTO ADICIONADO
+    {
+        return $this->hasOne(Avatar::class);
     }
 
     // O relacionamento 'roles()' é fornecido pelo trait HasRoles.

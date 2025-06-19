@@ -41,7 +41,8 @@ class PasswordResetLinkController extends Controller
         );
 
         if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
+            // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após POST.
+            return back()->with('status', __($status))->withStatus(303);
         }
 
         throw ValidationException::withMessages([

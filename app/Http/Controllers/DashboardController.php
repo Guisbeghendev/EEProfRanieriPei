@@ -19,8 +19,10 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // Carrega o usuário autenticado com suas roles e perfil/avatar.
-        $user->load('roles', 'profile.avatarRelation');
+        // CORREÇÃO APLICADA AQUI:
+        // A relação 'avatar' agora está diretamente no modelo User.
+        // Carrega o usuário autenticado com suas roles, perfil e avatar.
+        $user->load('roles', 'profile', 'avatar'); // <-- LINHA CORRIGIDA
 
         // Removendo a busca pelo grupo 'público' e seu ID aqui,
         // pois a intenção é NÃO filtrar galerias públicas para exibição.
@@ -55,7 +57,7 @@ class DashboardController extends Controller
         // Retorna a view 'Dashboard' do Inertia, passando os dados necessários
         return Inertia::render('Dashboard', [
             'auth' => [
-                'user' => $user->toArray(), // Passa o usuário com as roles e perfil/avatar carregados
+                'user' => $user->toArray(), // Passa o usuário com as roles, perfil e avatar carregados
             ],
             'userGroupsWithLatestGalleries' => $userGroupsWithLatestGalleries,
         ]);

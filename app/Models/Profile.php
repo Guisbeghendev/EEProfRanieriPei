@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\atabase\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne; // Já importado
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+// use Illuminate\Database\Eloquent\Relations\HasOne; // Não é mais necessário se 'avatarRelation' for removido
 
 class Profile extends Model
 {
@@ -13,7 +13,6 @@ class Profile extends Model
 
     protected $fillable = [
         'user_id',
-        // 'avatar', // REMOVIDO: O campo 'avatar' não está mais diretamente nesta tabela.
         'birth_date',
         'address',
         'city',
@@ -32,11 +31,9 @@ class Profile extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the avatar associated with the profile.
-     */
-    public function avatarRelation(): HasOne // Usamos 'avatarRelation' para evitar conflito com a coluna antiga
-    {
-        return $this->hasOne(Avatar::class);
-    }
+    // O relacionamento avatarRelation foi removido daqui
+    // public function avatarRelation(): HasOne
+    // {
+    //     return $this->hasOne(Avatar::class);
+    // }
 }

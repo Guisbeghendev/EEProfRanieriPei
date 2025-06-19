@@ -13,15 +13,12 @@ return new class extends Migration
     {
         Schema::create('avatars', function (Blueprint $table) {
             $table->id();
-            // Adiciona uma chave estrangeira para a tabela 'profiles'
-            // Cada avatar pertence a um único perfil, e um perfil pode ter no máximo um avatar.
-            $table->foreignId('profile_id')->unique()->constrained('profiles')->onDelete('cascade');
-            $table->string('path'); // Caminho interno no storage (ex: avatars/user_id.ext)
-            $table->string('url'); // URL pública para acesso no navegador (ex: /storage/avatars/user_id.ext)
-            $table->string('original_filename')->nullable(); // Nome original do arquivo enviado
-            $table->string('mime_type')->nullable(); // Tipo MIME do arquivo (image/jpeg, image/png)
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Um avatar pertence a um usuário
+            $table->string('path')->unique(); // Caminho para o arquivo do avatar, deve ser único
+            $table->string('original_file_name')->nullable(); // Nome do arquivo original (ex: "minha_foto.jpg")
+            $table->string('mime_type', 50)->nullable(); // Tipo MIME do arquivo (ex: "image/jpeg")
             $table->unsignedBigInteger('size')->nullable(); // Tamanho do arquivo em bytes
-            $table->timestamps();
+            $table->timestamps(); // created_at e updated_at
         });
     }
 

@@ -7,7 +7,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str; // Importação CRÍTICA adicionada aqui
+// A importação de Str não é mais estritamente necessária para esta parte,
+// mas pode ser útil para outras operações futuras, então podemos mantê-la ou remover se preferir.
+// use Illuminate\Support\Str;
 
 class Image extends Model
 {
@@ -17,7 +19,7 @@ class Image extends Model
         'gallery_id',
         'path_original',
         'path_thumb',
-        'original_file_name', // CORRIGIDO: Alinhado com sua migração
+        'original_file_name',
         'watermark_applied',
         'metadata',
     ];
@@ -41,59 +43,37 @@ class Image extends Model
 
     /**
      * Get the URL for the image thumbnail.
-     * Agora, o Job vai salvar APENAS O CAMINHO RELATIVO, e este acessador irá gerar a URL COMPLETA.
+     * Supõe que 'path_thumb' armazena APENAS o caminho relativo (ex: 'galleries/1/thumbs/image.jpg').
      */
-    public function getThumbnailUrlAttribute()
+    public function getThumbnailUrlAttribute(): ?string
     {
-        // Se o path_thumb já está vazio ou nulo por algum motivo, não tente gerar a URL
         if (empty($this->path_thumb)) {
             return null;
         }
-
-        // Certifica-se de que path_thumb não é uma URL completa já
-        // Remove a parte da URL base gerada por Storage::url() se já existir
-        $path = Str::startsWith($this->path_thumb, Storage::url(''))
-            ? Str::after($this->path_thumb, Storage::url(''))
-            : $this->path_thumb;
-
-        return Storage::url($path);
+        return Storage::url($this->path_thumb);
     }
 
     /**
      * Get the URL for the original image.
-     * Agora, o Job vai salvar APENAS O CAMINHO RELATIVO, e este acessador irá gerar a URL COMPLETA.
+     * Supõe que 'path_original' armazena APENAS o caminho relativo.
      */
-    public function getOriginalUrlAttribute()
+    public function getOriginalUrlAttribute(): ?string
     {
-        // Se o path_original já está vazio ou nulo por algum motivo, não tente gerar a URL
         if (empty($this->path_original)) {
             return null;
         }
-
-        // Certifica-se de que path_original não é uma URL completa já
-        // Remove a parte da URL base gerada por Storage::url() se já existir
-        $path = Str::startsWith($this->path_original, Storage::url(''))
-            ? Str::after($this->path_original, Storage::url(''))
-            : $this->path_original;
-
-        return Storage::url($path);
+        return Storage::url($this->path_original);
     }
 
     /**
      * Get the URL for the watermarked image.
      * Esta URL será usada para as imagens que os clientes veem.
-     * Assume que 'watermarked_path' no metadata será o caminho relativo.
+     * Supõe que 'watermarked_path' no metadata será o caminho relativo.
      */
-    public function getWatermarkedUrlAttribute()
+    public function getWatermarkedUrlAttribute(): ?string
     {
         if (isset($this->metadata['watermarked_path']) && !empty($this->metadata['watermarked_path'])) {
-            $path = $this->metadata['watermarked_path'];
-            // Certifica-se de que watermarked_path não é uma URL completa já
-            // Remove a parte da URL base gerada por Storage::url() se já existir
-            $path = Str::startsWith($path, Storage::url(''))
-                ? Str::after($path, Storage::url(''))
-                : $path;
-            return Storage::url($path);
+            return Storage::url($this->metadata['watermarked_path']);
         }
         return null;
     }
