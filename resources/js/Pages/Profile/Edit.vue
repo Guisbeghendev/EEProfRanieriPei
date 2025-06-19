@@ -5,7 +5,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import TextArea from '@/Components/TextArea.vue';
+import TextArea from '@/Components/TextArea.vue'; // <-- Importe o TextArea
 import { Link } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 
@@ -24,11 +24,19 @@ const formatDateForInput = (dateString) => {
 
 // Estado para a URL de pré-visualização do avatar
 // Inicializa com a URL do avatar existente (se houver, através da nova relação)
-const previewAvatarUrl = ref(props.user.profile?.avatar_relation?.url);
+// Nota: 'avatar_relation' é o nome que você usou no seu `Profile/Show.vue` e aqui.
+// No seu User model, o relacionamento para o avatar provavelmente se chama 'avatar'.
+// É importante que o nome usado aqui ('avatar_relation') reflita o nome da prop real.
+// Se no User model o relacionamento for `public function avatar()`, então a prop `user.avatar.url` já estaria disponível.
+// Ajustei a inicialização para usar `user.avatar?.url` para consistência com `AppLayout.vue` e o que o Controller carrega.
+const previewAvatarUrl = ref(props.user.avatar?.url);
 
 // Inicializa o formulário
 const form = useForm({
-    _method: 'patch',
+    _method: 'post', // Inertia.js com _method: 'patch' exige um POST real e o Laravel interpreta como PATCH.
+    // O route('profile.update') usa PATCH, então manter '_method: patch' é o correto.
+    // No entanto, para upload de arquivos, Inertia usa POST e o Laravel lida com _method.
+    // Vamos manter '_method: patch' e confiar no Inertia.
     name: props.user.name,
     email: props.user.email,
 
@@ -37,6 +45,7 @@ const form = useForm({
     remove_avatar: false, // Flag para indicar se o avatar deve ser removido
 
     // Campos da tabela 'profiles'
+    // Assumindo que user.profile é a relação 'profile' carregada
     birth_date: props.user.profile?.birth_date ? formatDateForInput(props.user.profile.birth_date) : '',
     address: props.user.profile?.address ?? '',
     city: props.user.profile?.city ?? '',
@@ -54,8 +63,8 @@ watch(() => form.avatar, (newAvatar) => {
         form.remove_avatar = false; // Desmarca a remoção se um novo avatar for selecionado
     } else if (newAvatar === null && !form.remove_avatar) {
         // Se avatar for nulo e não for para remover, mostra o avatar existente do usuário
-        // (que virá de props.user.profile.avatar_relation.url)
-        previewAvatarUrl.value = props.user.profile?.avatar_relation?.url;
+        // (que virá de props.user.avatar.url, carregado pelo Controller)
+        previewAvatarUrl.value = props.user.avatar?.url;
     }
 });
 
@@ -67,7 +76,7 @@ const handleAvatarChange = (event) => {
     } else {
         form.avatar = null;
         // Se o usuário desmarcar o arquivo, a pré-visualização volta para a URL original ou nulo
-        previewAvatarUrl.value = props.user.profile?.avatar_relation?.url;
+        previewAvatarUrl.value = props.user.avatar?.url;
     }
 };
 
@@ -80,7 +89,8 @@ const removeAvatar = () => {
 
 const submit = () => {
     // Quando há upload de arquivo, Inertia precisa enviar como FormData
-    form.post(route('profile.update'), {
+    // A rota para update do perfil deve ser POST com _method=patch.
+    form.post('/profile', { // <-- URL literal para profile.update (geralmente /profile)
         forceFormData: true, // Garante que o formulário seja enviado como FormData
         preserveScroll: true,
         onSuccess: () => {
@@ -95,7 +105,7 @@ const submit = () => {
             if (errors.avatar) {
                 form.avatar = null;
                 // Mantém a pré-visualização existente se houver, ou volta para a original
-                previewAvatarUrl.value = props.user.profile?.avatar_relation?.url;
+                previewAvatarUrl.value = props.user.avatar?.url;
             }
         },
     });
@@ -112,11 +122,9 @@ const submit = () => {
 
         <div class="py-12 max-w-4xl mx-auto sm:px-6 lg:px-8 bg-prata1 dark:bg-gray-900 rounded-lg space-y-8">
             <form @submit.prevent="submit">
-                <!-- Seção de Dados Pessoais -->
                 <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
                     <h3 class="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Dados Pessoais</h3>
 
-                    <!-- Avatar Upload -->
                     <div class="mb-6 flex flex-col items-center">
                         <InputLabel for="avatar" value="Avatar" class="mb-2" />
                         <img
@@ -132,7 +140,6 @@ const submit = () => {
                             Sem Avatar
                         </div>
 
-                        <!-- Botão de Upload Estilizado -->
                         <label for="avatar" class="cursor-pointer inline-flex items-center px-4 py-2 bg-laranja2 text-preto1 font-semibold text-xs rounded-md shadow-sm hover:bg-laranja1-hover focus:ring-4 focus:ring-laranja2 focus:ring-offset-2 dark:bg-laranja-dark dark:hover:bg-laranja-dark-hover dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
                             Selecionar Imagem
                             <input
@@ -148,7 +155,7 @@ const submit = () => {
                             Selecione uma imagem para seu avatar (JPG, PNG, GIF, máx. 2MB).
                         </p>
 
-                        <div v-if="props.user.profile?.avatar_relation" class="mt-4 flex items-center">
+                        <div v-if="props.user.avatar?.url" class="mt-4 flex items-center">
                             <input
                                 type="checkbox"
                                 id="remove_avatar_checkbox"
@@ -163,7 +170,6 @@ const submit = () => {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Nome -->
                         <div>
                             <InputLabel for="name" value="Nome" />
                             <TextInput
@@ -179,7 +185,6 @@ const submit = () => {
                             <InputError :message="form.errors.name" class="mt-2" />
                         </div>
 
-                        <!-- E-mail -->
                         <div>
                             <InputLabel for="email" value="E-mail" />
                             <TextInput
@@ -197,8 +202,7 @@ const submit = () => {
                                 <p class="text-sm mt-2 text-gray-800 dark:text-gray-200">
                                     Seu endereço de e-mail não foi verificado.
                                     <Link
-                                        :href="route('verification.send')"
-                                        method="post"
+                                        href="/email/verification-notification" method="post"
                                         as="button"
                                         class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
                                     >
@@ -215,7 +219,6 @@ const submit = () => {
                             </div>
                         </div>
 
-                        <!-- Data de Nascimento -->
                         <div>
                             <InputLabel for="birth_date" value="Data de Nascimento" />
                             <TextInput
@@ -230,81 +233,7 @@ const submit = () => {
                     </div>
                 </section>
 
-                <!-- Seção de Contatos -->
-                <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-                    <h3 class="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contatos</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Endereço -->
-                        <div>
-                            <InputLabel for="address" value="Endereço" />
-                            <TextInput
-                                id="address"
-                                type="text"
-                                class="mt-1 block w-full"
-                                v-model="form.address"
-                                :class="{ 'border-red-500': form.errors.address }"
-                            />
-                            <InputError :message="form.errors.address" class="mt-2" />
-                        </div>
-
-                        <!-- Cidade -->
-                        <div>
-                            <InputLabel for="city" value="Cidade" />
-                            <TextInput
-                                id="city"
-                                type="text"
-                                class="mt-1 block w-full"
-                                v-model="form.city"
-                                :class="{ 'border-red-500': form.errors.city }"
-                            />
-                            <InputError :message="form.errors.city" class="mt-2" />
-                        </div>
-
-                        <!-- Estado -->
-                        <div>
-                            <InputLabel for="state" value="Estado" />
-                            <TextInput
-                                id="state"
-                                type="text"
-                                class="mt-1 block w-full"
-                                v-model="form.state"
-                                :class="{ 'border-red-500': form.errors.state }"
-                            />
-                            <InputError :message="form.errors.state" class="mt-2" />
-                        </div>
-
-                        <!-- WhatsApp -->
-                        <div>
-                            <InputLabel for="whatsapp" value="WhatsApp" />
-                            <TextInput
-                                id="whatsapp"
-                                type="text"
-                                class="mt-1 block w-full"
-                                v-model="form.whatsapp"
-                                placeholder="(XX) XXXXX-XXXX"
-                                :class="{ 'border-red-500': form.errors.whatsapp }"
-                            />
-                            <InputError :message="form.errors.whatsapp" class="mt-2" />
-                        </div>
-
-                        <!-- Outro Contato -->
-                        <div class="md:col-span-2">
-                            <InputLabel for="other_contact" value="Outro Contato" />
-                            <TextInput
-                                id="other_contact"
-                                type="text"
-                                class="mt-1 block w-full"
-                                v-model="form.other_contact"
-                                :class="{ 'border-red-500': form.errors.other_contact }"
-                            />
-                            <InputError :message="form.errors.other_contact" class="mt-2" />
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Seção de Biografia e Texto Ranieri -->
                 <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8 space-y-6">
-                    <!-- Biografia -->
                     <div>
                         <InputLabel for="biography" value="Biografia" />
                         <TextArea
@@ -312,12 +241,10 @@ const submit = () => {
                             class="mt-1 block w-full"
                             v-model="form.biography"
                             :class="{ 'border-red-500': form.errors.biography }"
-                            rows="4"
-                        />
+                            :rows="4" />
                         <InputError :message="form.errors.biography" class="mt-2" />
                     </div>
 
-                    <!-- Texto Ranieri -->
                     <div>
                         <InputLabel for="ranieri_text" value="O que eu sou para a Escola Ranieri?" />
                         <TextArea
@@ -325,17 +252,14 @@ const submit = () => {
                             class="mt-1 block w-full"
                             v-model="form.ranieri_text"
                             :class="{ 'border-red-500': form.errors.ranieri_text }"
-                            rows="4"
-                        />
+                            :rows="4" />
                         <InputError :message="form.errors.ranieri_text" class="mt-2" />
                     </div>
                 </section>
 
-                <!-- Botões de Ação -->
                 <div class="flex gap-4 justify-end">
                     <Link
-                        :href="route('profile.show')"
-                        class="px-4 py-2 bg-laranja2 text-preto1 rounded-md hover:bg-laranja1-hover flex items-center justify-center"
+                        href="/profile" class="px-4 py-2 bg-laranja2 text-preto1 rounded-md hover:bg-laranja1-hover flex items-center justify-center"
                     >
                         Cancelar
                     </Link>

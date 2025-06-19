@@ -6,18 +6,16 @@
             <h1>Meu Perfil</h1>
         </template>
 
-        <!-- A div externa agora tem padding py-16 e px maiores para a "área branca". -->
         <div
             class="py-16 max-w-4xl mx-auto sm:px-8 lg:px-12 space-y-8"
         >
-            <!-- Cada seção agora tem um fundo bg-gray-200 e padding p-4 (reduzido). -->
             <section class="bg-gray-200 dark:bg-gray-800 rounded-lg shadow p-4">
                 <h3 class="text-2xl font-bold mb-6">Dados Pessoais</h3>
                 <div class="flex flex-col md:flex-row items-center gap-6">
                     <div class="flex-shrink-0">
                         <img
-                            v-if="user.profile?.avatar_relation?.url"
-                            :src="user.profile.avatar_relation.url"
+                            v-if="user.avatar?.url"
+                            :src="user.avatar.url"
                             alt="Avatar"
                             class="w-32 h-32 rounded-full object-cover border-2 border-laranja2"
                         />
@@ -109,14 +107,12 @@
 
             <div class="flex gap-4 justify-end">
                 <Link
-                    href="/dashboard"
-                    class="px-4 py-2 bg-laranja2 text-preto1 rounded-md hover:bg-laranja1-hover"
+                    href="/dashboard" class="px-4 py-2 bg-laranja2 text-preto1 rounded-md hover:bg-laranja1-hover"
                 >
                     Voltar
                 </Link>
                 <Link
-                    href="/profile/edit"
-                    class="px-4 py-2 bg-roxo2 text-white rounded-md hover:bg-roxo2-hover"
+                    href="/profile/edit" class="px-4 py-2 bg-roxo2 text-white rounded-md hover:bg-roxo2-hover"
                 >
                     Editar Conta
                 </Link>
